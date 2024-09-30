@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Container, Snackbar, Typography } from "@mui/material";
 import { Country } from "../types/Country";
 import { fetchAllCountries } from "../services/countryApiService";
 import CountryGrid from "./CountryGrid";
+import SearchBar from "./SearchBar";
+import FavoritesToggle from "./FavoritesToggle";
 
 function CountriesApp() {
   const [countries, setCountries] = useState<Country[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [error, setError] = useState<string>("");
   const [openSnackbar, setOpenSnackbar] = useState<boolean>(false);
+  const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
+  const [favoritesOnly, setFavoritesOnly] = useState<boolean>(false);
 
   useEffect(() => {
     const getCountries = async () => {
@@ -50,13 +54,39 @@ function CountriesApp() {
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
   };
 
-  const displayCountries = countries;
+  const handleSearch = (results: Country[]) => {
+    setFilteredCountries(results);
+  };
+
+  const handleToggleFavorites = () => {
+    setFavoritesOnly(!favoritesOnly);
+  };
+
+  const determineDisplayCountries = (): Country[] => {
+    if (favoritesOnly) {
+      return countries.filter((country) => favorites.includes(country.cca3));
+    } else if (filteredCountries.length > 0) {
+      return filteredCountries;
+    } else {
+      return countries;
+    }
+  };
+
+  const displayCountries = useMemo(
+    () => determineDisplayCountries(),
+    [favoritesOnly, countries, filteredCountries, favorites],
+  );
 
   return (
     <Container maxWidth="lg">
       <Typography variant="h4" component="h1" gutterBottom>
         REST Countries
       </Typography>
+      <SearchBar countries={countries} onSearch={handleSearch} />
+      <FavoritesToggle
+        checked={favoritesOnly}
+        onChange={handleToggleFavorites}
+      />
       <CountryGrid
         countries={displayCountries}
         favorites={favorites}
